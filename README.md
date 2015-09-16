@@ -2,6 +2,8 @@
 A Java Swing Panel to design basic scenes which allows to add custom objects, 
 edit their position, size and connecting them with other objects using a WYSIWYG design pane.
 
+![](https://github.com/Flynamic/LDesigner/blob/master/ldesignerscreen.png)
+
 ## Installation
 LDesigner requires JGoodies Forms (1.3.0+). I will remove this dependency in the future.
 You can download the archives here: http://www.jgoodies.com/downloads/archive/
