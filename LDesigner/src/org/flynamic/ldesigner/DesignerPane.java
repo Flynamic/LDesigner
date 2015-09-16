@@ -71,8 +71,12 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
     public void calculateScene() {
     	double x = 10;
     	double y = 10;
-    	double width = getEntityContainer().getDimensions().getWidth();
-    	double height = getEntityContainer().getDimensions().getHeight();
+    	double width = 0;
+    	double height = 0;
+    	if (getEntityContainer() != null) {
+        	width = getEntityContainer().getDimensions().getWidth();
+        	height = getEntityContainer().getDimensions().getHeight();
+    	}
     	
     	int padding = 10;
     	

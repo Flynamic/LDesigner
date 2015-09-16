@@ -25,31 +25,15 @@ public class DesignerPanel extends JPanel {
     private JSplitPane splitPane_2;
     private LayersPane layersPane;
 
-
-    /**
-     * Launch the application.
-     */
-    /*
-    public static void main(String[] args) {
-        EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    DesignerWindow frame = new DesignerWindow();
-                    frame.setVisible(true);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
-    */
-
     /**
      * Create the frame.
      */
     public DesignerPanel(Class<? extends DesignerEntityContainer<?>> containerClass) {
+        this();
         setContainerClass(containerClass);
-        
+    }
+    
+    public DesignerPanel() {
         setBounds(100, 100, 450, 300);
 
         setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -91,12 +75,6 @@ public class DesignerPanel extends JPanel {
         toolsPane = new ToolsPane();
         add(toolsPane, BorderLayout.NORTH);
         toolsPane.designerPanel = this;
-        
-        try {
-			this.getDesignerPane().setEntityContainer(getContainerClass().newInstance());
-		} catch (InstantiationException | IllegalAccessException e1) {
-			e1.printStackTrace();
-		}
     }
 
 	public InfoPane getInfoPane() {
@@ -130,5 +108,19 @@ public class DesignerPanel extends JPanel {
 	 */
 	public void setContainerClass(Class<? extends DesignerEntityContainer<?>> containerClass) {
 		this.containerClass = containerClass;
+        
+        try {
+			setEntityContainer(getContainerClass().newInstance());
+		} catch (InstantiationException | IllegalAccessException e1) {
+			e1.printStackTrace();
+		}
+	}
+	
+	public DesignerEntityContainer<?> getEntityContainer() {
+		return this.getDesignerPane().getEntityContainer();
+	}
+	
+	public void setEntityContainer(DesignerEntityContainer<?> container) {
+		this.getDesignerPane().setEntityContainer(container);
 	}
 }
