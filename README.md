@@ -1,5 +1,5 @@
 # LDesigner
-A Java Swing Panel to design basic scenes which allows to add custom objects, 
+A Java Swing Panel to design basic scenes, add custom objects, 
 edit their position, size and connecting them with other objects using a WYSIWYG design pane.
 
 ![](https://github.com/Flynamic/LDesigner/blob/master/ldesignerscreen.png)
