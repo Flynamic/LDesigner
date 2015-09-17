@@ -32,6 +32,7 @@ import java.util.List;
 import javax.swing.JPanel;
 
 import org.flynamic.ldesigner.DesignerEntityContainer.DropListener;
+import org.flynamic.ldesigner.DesignerPane.Resizer.Orientation;
 import org.flynamic.ldesigner.util.ReferenceUnit;
 
 public class DesignerPane extends JPanel implements MouseListener, MouseMotionListener, KeyListener {
@@ -137,7 +138,7 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
     	}
     }
     
-    private Rectangle2D[][] corners = new Rectangle2D[2][2];
+    private Resizer[] resizers = new Resizer[8];
     private Ellipse2D anchor;
     
     /**
@@ -236,16 +237,64 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
     	Rectangle2D bounding = path.getBounds2D();
     	double w = bounding.getWidth();
     	double h = bounding.getHeight();
-    	for (int j = 0; j < corners.length; j++) {
-	    	for (int i = 0; i < corners[j].length; i++) {
-	    		Rectangle2D corner = new Rectangle2D.Double(
-	    				bounding.getX() + (i == 0 ? -c : w+c) - c*i, bounding.getY() + (j == 0 ? -c : h+c) - c*j, c, c);
-	    		g.setColor(Color.WHITE);
-	    		g.fill(corner);
-	    		g.setColor(Color.BLACK);
-	    		g.draw(corner);
-	    		corners[j][i] = corner;
-	    	}
+    	for (int i = 0; i < resizers.length; i++) {
+    		double x = 0;
+    		double y = 0;
+    		Orientation orientation = null;
+    		// Left
+    		if (i < 3) {
+    			x = 0;
+    			y = (bounding.getHeight() / 2) * i;
+    			x -= c;
+    			y -= i == 0 ? c : (i == 1 ? c/2 : (i == 2 ? 0 : 0));;
+    		}
+    		// Middle
+    		if (i > 2 && i < 5) {
+    			x = bounding.getWidth() / 2;
+    			y = bounding.getHeight() * (i-3);
+    			x -= c/2;
+    			y -= i == 3 ? c : (i == 4 ? 0 : 0);
+    		}
+    		// Right
+    		if (i > 4) {
+    			x = bounding.getWidth();
+    			y = (bounding.getHeight() / 2) * (i-5);
+    			y -= i == 5 ? c : (i == 6 ? c/2 : (i == 7 ? 0 : 0));;
+    		}
+    		switch (i) {
+    		case 0:
+    			orientation = Orientation.NW;
+    			break;
+    		case 1:
+    			orientation = Orientation.W;
+    			break;
+    		case 2:
+    			orientation = Orientation.SW;
+    			break;
+    		case 3:
+    			orientation = Orientation.N;
+    			break;
+    		case 4:
+    			orientation = Orientation.S;
+    			break;
+    		case 5:
+    			orientation = Orientation.NE;
+    			break;
+    		case 6:
+    			orientation = Orientation.E;
+    			break;
+    		case 7:
+    			orientation = Orientation.SE;
+    			break;
+    		}
+			Rectangle2D rect = new Rectangle2D.Double(
+					bounding.getX() + x,
+					bounding.getY() + y, c, c);
+			g.setColor(Color.WHITE);
+			g.fill(rect);
+			g.setColor(Color.BLACK);
+			g.draw(rect);
+			resizers[i] = new Resizer(orientation, rect);
     	}
     	if (object.isAnchorEditable()) {
 	    	PathIterator iterator = path.getPathIterator(null);
@@ -348,7 +397,7 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
     }
         
     public void deselectAll() {
-		this.corners = new Rectangle2D[2][2];
+		this.resizers = new Resizer[8];
 		this.anchor = null;
 		this.selectedObject = null;
 		this.designerPanel.getInfoPane().setInspector(this.getEntityContainer());
@@ -395,10 +444,6 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
     private void goLeft() {
     	getSelection().move(-1, 0);
     }
-        
-    public enum Corner {
-    	TopLeft, TopRight, BottomLeft, BottomRight
-    }
     
     private DesignerEntity selectedObject = null;
     private DesignerEntity hoveringObject = null;
@@ -406,7 +451,7 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
     private DesignerEntity resizingObject = null;
     private Point2D currentPoint = null;
     private Point2D selectedObjectOldPoint = null;
-    private Corner corner = null;
+    private Orientation currentResizer = null;
     private boolean dragAnchor = false;
 
     private boolean keepProportions = false;
@@ -455,7 +500,7 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
 			currentPoint.setLocation(x, y);
 			this.repaint();
 		}
-		if (corner != null && resizingObject != null && currentPoint != null) {
+		if (currentResizer != null && resizingObject != null && currentPoint != null) {
 			int x = e.getX();
 			int y = e.getY();
 			Point2D p = new Point2D.Double(x, y);
@@ -476,7 +521,7 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
 			double pdx = ((hprop>wprop) ? wprop : hprop)*dx;
 			double pdy = ((hprop>wprop) ? wprop : hprop)*dy;
 			
-			if (corner == Corner.TopLeft) {
+			if (currentResizer == Orientation.NW) {
 				if (keepsProportions() || resizingObject.keepsProportions()) {
 					if (Math.abs(dx) >= Math.abs(dy)) {
 						nw = ow - pdx;
@@ -493,7 +538,7 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
 				resizingObject.getUnit().setWidth(nw);
 				resizingObject.getUnit().setHeight(nh);
 			}
-			if (corner == Corner.TopRight) {
+			if (currentResizer == Orientation.NE) {
 				if (keepsProportions() || resizingObject.keepsProportions()) {
 					if (Math.abs(dx) >= Math.abs(dy)) {
 						nw = ow + pdx;
@@ -510,7 +555,7 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
 				resizingObject.getUnit().setWidth(nw);
 				resizingObject.getUnit().setHeight(nh);
 			}
-			if (corner == Corner.BottomLeft) {
+			if (currentResizer == Orientation.SW) {
 				if (keepsProportions() || resizingObject.keepsProportions()) {
 					if (Math.abs(dx) >= Math.abs(dy)) {
 						nw = ow - pdx;
@@ -527,7 +572,7 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
 				resizingObject.getUnit().setWidth(nw);
 				resizingObject.getUnit().setHeight(nh);
 			}
-			if (corner == Corner.BottomRight) {
+			if (currentResizer == Orientation.SE) {
 				if (keepsProportions() || resizingObject.keepsProportions()) {
 					if (Math.abs(dx) >= Math.abs(dy)) {
 						nw = ow + pdx;
@@ -539,6 +584,46 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
 				} else {
 					nw = ow + dx;
 					nh = oh + dy;
+				}
+				resizingObject.move(-(ow - nw) * anch.getX(), -(oh - nh) * anch.getY());
+				resizingObject.getUnit().setWidth(nw);
+				resizingObject.getUnit().setHeight(nh);
+			}
+			if (currentResizer == Orientation.N) {
+				nw = ow;
+				nh = oh - dy;
+				if (keepsProportions() || resizingObject.keepsProportions()) {
+					nw = wprop * nh;
+				}
+				resizingObject.move(-(ow - nw) * anch.getX(), (oh - nh) * anch.getY());
+				resizingObject.getUnit().setWidth(nw);
+				resizingObject.getUnit().setHeight(nh);
+			}
+			if (currentResizer == Orientation.W) {
+				nw = ow - dx;
+				nh = oh;
+				if (keepsProportions() || resizingObject.keepsProportions()) {
+					nh = hprop * nw;
+				}
+				resizingObject.move((ow - nw) * anch.getX(), -(oh - nh) * anch.getY());
+				resizingObject.getUnit().setWidth(nw);
+				resizingObject.getUnit().setHeight(nh);
+			}
+			if (currentResizer == Orientation.E) {
+				nw = ow + dx;
+				nh = oh;
+				if (keepsProportions() || resizingObject.keepsProportions()) {
+					nh = hprop * nw;
+				}
+				resizingObject.move(-(ow - nw) * anch.getX(), -(oh - nh) * anch.getY());
+				resizingObject.getUnit().setWidth(nw);
+				resizingObject.getUnit().setHeight(nh);
+			}
+			if (currentResizer == Orientation.S) {
+				nw = ow;
+				nh = oh + dy;
+				if (keepsProportions() || resizingObject.keepsProportions()) {
+					nw = wprop * nh;
 				}
 				resizingObject.move(-(ow - nw) * anch.getX(), -(oh - nh) * anch.getY());
 				resizingObject.getUnit().setWidth(nw);
@@ -587,30 +672,43 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
         for (DesignerEntity object : getObjects()) {
         	object.getUnit().calculate();
 			Rectangle r = object.getUnit().getRealFrame();
-			for (int i = 0; i < corners.length; i++) {
-	        	for (int j = 0; j < corners[i].length; j++) {
-	        		Rectangle2D rect = corners[i][j];
-	        		if (rect == null) break;
-	        		rect = corners[i][j].getFrame();
-	        		if (rect.contains(point)) {
-	        			int cursor = Cursor.DEFAULT_CURSOR;
-	        			if (i == 0) {
-	        				if (j == 0) {
-	        					cursor = Cursor.NW_RESIZE_CURSOR;
-	        				} else {
-	        					cursor = Cursor.NE_RESIZE_CURSOR;
-	        				}
-	        			}
-	        			if (i == 1) {
-	        				if (j == 0) {
-	        					cursor = Cursor.SW_RESIZE_CURSOR;
-	        				} else {
-	        					cursor = Cursor.SE_RESIZE_CURSOR;
-	        				}
-	        			}
-	        			setCursor(Cursor.getPredefinedCursor(cursor));
-	        		}
-	        	}
+			for (int i = 0; i < resizers.length; i++) {
+				Resizer resizer = resizers[i];
+				if (resizer == null)
+					break;
+				Rectangle2D rect = resizers[i].getRect().getFrame();
+				if (rect.contains(point)) {
+					int cursor = Cursor.DEFAULT_CURSOR;
+					switch (resizer.getOrientation()) {
+					case NW:
+						cursor = Cursor.NW_RESIZE_CURSOR;
+						break;
+					case W:
+						cursor = Cursor.W_RESIZE_CURSOR;
+						break;
+					case SW:
+						cursor = Cursor.SW_RESIZE_CURSOR;
+						break;
+					case N:
+						cursor = Cursor.N_RESIZE_CURSOR;
+						break;
+					case S:
+						cursor = Cursor.S_RESIZE_CURSOR;
+						break;
+					case NE:
+						cursor = Cursor.NE_RESIZE_CURSOR;
+						break;
+					case E:
+						cursor = Cursor.E_RESIZE_CURSOR;
+						break;
+					case SE:
+						cursor = Cursor.SE_RESIZE_CURSOR;
+						break;
+					default:
+						break;
+					}
+					setCursor(Cursor.getPredefinedCursor(cursor));
+				}
 			}
         }
 	}
@@ -682,30 +780,16 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
 				this.draggingObject = object;
 				return;
 			}
-			/* For resizing, find corner that is clicked on */
-			for (int i = 0; i < corners.length; i++) {
-	        	for (int j = 0; j < corners[i].length; j++) {
-	        		Rectangle2D rect = corners[i][j];
-	        		if (rect == null) break;
-	        		rect = corners[i][j].getBounds2D();
-	        		if (rect.contains(currentPoint)) {
-	        			this.resizingObject = this.selectedObject;
-	        			if (i == 0) {
-	        				if (j == 0) {
-	        					this.corner = Corner.TopLeft;
-	        				} else {
-	        					this.corner = Corner.TopRight;
-	        				}
-	        			}
-	        			if (i == 1) {
-	        				if (j == 0) {
-	        					this.corner = Corner.BottomLeft;
-	        				} else {
-	        					this.corner = Corner.BottomRight;
-	        				}
-	        			}
-	        		}
-	        	}
+			/* For resizing, find resizer that is clicked on */
+			for (int i = 0; i < resizers.length; i++) {
+				Resizer resizer = resizers[i];
+				if (resizer == null)
+					break;
+				Rectangle2D rect = resizer.getRect().getBounds2D();
+				if (rect.contains(currentPoint)) {
+					this.resizingObject = this.selectedObject;
+					this.currentResizer = resizer.getOrientation();
+				}
 	        }
         }
 	}
@@ -716,7 +800,7 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
 		this.draggingObject = null;
 		this.resizingObject = null;
 		this.currentPoint = null;
-		this.corner = null;
+		this.currentResizer = null;
 		this.dragAnchor = false;
 		this.selectedObjectOldPoint = null;
 		this.anchor = null;
@@ -881,6 +965,48 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
 	public void setAbsoluteScene(boolean absoluteScene) {
 		this.absoluteScene = absoluteScene;
 	}
+	
+	static class Resizer {
+		enum Orientation {
+			W, NW, N, NE, E, SW, S, SE
+		}
+		
+		private Orientation orientation;
+		private Rectangle2D rect;
+
+		public Resizer(Orientation orientation, Rectangle2D rect) {
+			setOrientation(orientation);
+			setRect(rect);
+		}
+		
+		/**
+		 * @return the orientation
+		 */
+		public Orientation getOrientation() {
+			return orientation;
+		}
+
+		/**
+		 * @param orientation the orientation to set
+		 */
+		public void setOrientation(Orientation orientation) {
+			this.orientation = orientation;
+		}
+
+		/**
+		 * @return the rect
+		 */
+		public Rectangle2D getRect() {
+			return rect;
+		}
+
+		/**
+		 * @param rect the rect to set
+		 */
+		public void setRect(Rectangle2D rect) {
+			this.rect = rect;
+		}
+	}
 
 	public interface EntityPicker {
 		public void entityPicked(DesignerEntity entity);
@@ -914,6 +1040,7 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
 			
 		}
 
+		@SuppressWarnings("unchecked")
 		@Override
 		public void drop(DropTargetDropEvent event) {
 	        // Accept copy drops
@@ -932,16 +1059,13 @@ public class DesignerPane extends JPanel implements MouseListener, MouseMotionLi
 	                if (flavor.isFlavorJavaFileListType()) {
 
 	                    // Get all of the dropped files
-	                    List<File> files = (List<File>) transferable.getTransferData(flavor);
+	                	if (transferable.getTransferData(flavor) instanceof List<?>) {
+		                    List<File> files = (List<File>) transferable.getTransferData(flavor);
 
-	                    // Loop them through
-	                    for (File file : files) {
-	                        // Print out the file path
-	                    }
-	                    
-	                    for (DropListener listener : getEntityContainer().getDropListeners()) {
-	                    	listener.dropFiles(files, event.getLocation());
-                        }
+		                    for (DropListener listener : getEntityContainer().getDropListeners()) {
+		                    	listener.dropFiles(files, event.getLocation());
+	                        }
+	                	}
 	                }
 	            } catch (Exception e) {
 	                // Print out the error stack

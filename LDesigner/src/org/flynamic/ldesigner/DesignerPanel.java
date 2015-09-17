@@ -45,7 +45,7 @@ public class DesignerPanel extends JPanel {
         add(splitPane, BorderLayout.CENTER);
         
         splitPane_1 = new JSplitPane();
-        splitPane_1.setResizeWeight(0.9);
+        splitPane_1.setResizeWeight(0.8);
         splitPane_1.setContinuousLayout(true);
         splitPane.setRightComponent(splitPane_1);
         

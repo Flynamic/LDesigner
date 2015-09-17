@@ -73,7 +73,7 @@ public class ObjectsPane extends JPanel {
 		DefaultTreeModel model = new DefaultTreeModel(root);
 		
 		tree.setShowsRootHandles(true);
-		tree.setBackground(UIManager.getColor("Button.background"));
+		//tree.setBackground(UIManager.getColor("Button.background"));
 		tree.setModel(model);
 		tree.addMouseListener(new MouseAdapter() {
 			@Override
